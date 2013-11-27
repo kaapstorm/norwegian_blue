@@ -84,12 +84,14 @@ class RobotBase(object):
         """
         Coroutine that accepts a heading in radians clockwise from north
         """
-        radians = yield  # radians clockwise from north
-        game.enqueue_heading(self.__id, radians)
+        while True:
+            radians = yield  # radians clockwise from north
+            game.enqueue_heading(self.__id, radians)
 
     def __set_speed(self):
         """
         Coroutine that accepts a speed in metres per second
         """
-        mps = yield  # radians clockwise from north
-        game.enqueue_heading(self.__id, mps)
+        while True:
+            mps = yield  # radians clockwise from north
+            game.enqueue_heading(self.__id, mps)
