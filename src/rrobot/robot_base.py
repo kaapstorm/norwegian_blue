@@ -1,4 +1,4 @@
-from game import game
+from rrobot.game_client import GameClient
 
 
 class RobotBase(object):
@@ -26,6 +26,7 @@ class RobotBase(object):
     """
     def __init__(self, id_):
         self.__id = id_
+        self._game = GameClient()
         self.__heading = self.__set_heading()
         next(self.__heading)
         self.__speed = self.__set_speed()
@@ -34,17 +35,17 @@ class RobotBase(object):
     @property
     def coords(self):
         """Coordinates (origin southwest corner of battlefield)"""
-        return game.get_coords(self.__id)
+        return self._game.send_sync('get_coords', self.__id)
 
     @property
     def damage(self):
         """Damage rating of 0 to 99"""
-        return game.get_damage(self.__id)
+        return self._game.send_sync('get_damage', self.__id)
 
     @property
     def heading(self):
         """Heading (radians clockwise from north)"""
-        return game.get_heading(self.__id)
+        return self._game.send_sync('get_heading', self.__id)
 
     @heading.setter
     def heading(self, radians):
@@ -53,14 +54,14 @@ class RobotBase(object):
     @property
     def speed(self):
         """Speed (metres per second)"""
-        return game.get_speed(self.__id)
+        return self._game.send_sync('get_speed', self.__id)
 
     @speed.setter
     def speed(self, mps):
         self.__speed.send(mps)
 
     def strike(self):
-        game.enqueue_strike(self.__id)
+        self._game.send_async('strike', self.__id)
 
     def bumped(self):
         """
@@ -86,7 +87,7 @@ class RobotBase(object):
         """
         while True:
             radians = yield  # radians clockwise from north
-            game.enqueue_heading(self.__id, radians)
+            self._game.send_async('set_heading', self.__id, radians)
 
     def __set_speed(self):
         """
@@ -94,4 +95,4 @@ class RobotBase(object):
         """
         while True:
             mps = yield  # radians clockwise from north
-            game.enqueue_heading(self.__id, mps)
+            self._game.send_async('set_speed', self.__id, mps)
