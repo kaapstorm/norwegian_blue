@@ -1,15 +1,5 @@
 """
-The game server reads tasks off the queue and executes them.
-
-Requests are pulled off the message queue, timestamped, and added to the
-ActionQueue. If the last item in the ActionQueue has a later timestamp than
-the new item, it is inserted, not appended.
-
-After a minimum period, to allow late robots to submit requests, ActionQueue
-items are executed. Requests submitted later than the last executed item are
-performed late -- we do not change the past.
-
-The timestamp allows accurate calculation of location at speed.
+The game server reads tasks off the queue.
 
 """
 import zmq
