@@ -12,7 +12,7 @@ class RobotBase(object):
      * damage: An integer percentage, where 0 is healthy and 100 is destroyed.
 
     Robot status can be read and set using:
-     * heading: The robot's heading in radians clockwise from north
+     * heading: The robot's heading in radians counterclockwise from east
      * speed: The robot's speed in metres per second
 
     The robot can attack another robot using the "attack" method. It takes no
@@ -33,12 +33,18 @@ class RobotBase(object):
     def started(self):
         """
         Called when the game starts
+
+        The coroutine is sent a tuple of x-y coordinates of the robot, e.g.
+        (56, 32)
         """
         coords = yield
 
     def attacked(self):
         """
-        Called when this robot is attacked by another robot
+        Called when this robot is attacked by another robot,
+
+        The coroutine is sent the (absolute) heading in radians from which the
+        robot was attacked.
         """
         while True:
             heading = yield
@@ -46,13 +52,22 @@ class RobotBase(object):
     def bumped(self):
         """
         Called when robot this bumps or is bumped
+
+        The coroutine is sent the (absolute) heading in radians where the
+        robot was bumped.
         """
         while True:
             heading = yield
 
     def radar_updated(self):
         """
-        Called at a regular interval
+        Called at a regular interval.
+
+        The coroutine is sent a dictionary of coordinates and robot class
+        names, e.g. ::
+
+            {(15, 40): 'Clango', (56, 32): 'Daneel'}
+
         """
         while True:
             radar = yield
@@ -87,7 +102,7 @@ class RobotBase(object):
     @property
     @asyncio.coroutine
     def heading(self):
-        """Heading (radians clockwise from north)"""
+        """Heading (radians counterclockwise from east)"""
         #return self._game.send_sync('get_heading', self.__id)
         rads = yield from self._client.send_async('get_heading', self.__id)
         return rads

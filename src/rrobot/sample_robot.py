@@ -7,16 +7,23 @@ class SampleRobot(RobotBase):
     """
     Drives to the middle of the battlefield and stops
     """
+    @staticmethod
+    def _get_middle():
+        """
+        Returns the coordinates of the middle of the battlefield
+        """
+        x_max, y_max = settings['battlefield_size']
+        return x_max / 2, y_max / 2
+
     def started(self):
         """
         Called when the game starts
         """
         x, y = yield
         # Move to middle
-        x_max, y_max = settings['battlefield_size']
-        x_mid, y_mid = x_max / 2, y_max / 2
+        x_mid, y_mid = self._get_middle()
         # Set heading
-        rads = math.tan((y_mid - y)/(x_mid - x))
+        rads = math.atan((y_mid - y)/(x_mid - x))
         self.heading = rads
         # Set speed
         self.speed = 10
@@ -37,16 +44,15 @@ class SampleRobot(RobotBase):
 
     def radar_updated(self):
         """
-        Called at a regular interval
+        Called at a regular interval.
         """
         while True:
             radar = yield
             # Are we there yet?
             x, y = self.coords
-            x_max, y_max = settings['battlefield_size']
-            x_mid, y_mid = x_max / 2, y_max / 2
-            x_dist, y_dist = x_mid - x, y_mid - y
-            hyp = math.sqrt(pow(x_dist, 2) + pow(y_dist, 2))
-            if hyp < 10:
+            x_mid, y_mid = self._get_middle()
+            x_d, y_d = x_mid - x, y_mid - y
+            dist = math.sqrt(pow(x_d, 2) + pow(y_d, 2))
+            if dist < 10:
                 # Stop
                 self.speed = 0
