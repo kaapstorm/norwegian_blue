@@ -9,7 +9,6 @@ from rrobot.maths import seg_intersect, is_in_angle, get_inverse_square
 
 
 # TODO: Add power. Attacks, accelleration, and maintaining speed cost power
-# TODO: Manage speed.
 
 
 logger = logging.getLogger(__name__)
@@ -61,6 +60,7 @@ class Game(object):
         return self._get_robot_attr(robot_id, 'speed')
 
     def set_speed(self, robot_id, mps):
+        mps = min(mps, settings['max_speed'])
         self._set_robot_attr(robot_id, 'speed', mps)
 
     def attack(self, robot_id):
@@ -111,7 +111,7 @@ class Game(object):
         ...     'heading': 0
         ... }
         >>> Game._get_line_seg(data, 2)
-        ((2, 2), (7, 2))
+        ((2, 2), (7.0, 2.0))
 
         """
         # Calc new position
@@ -146,7 +146,7 @@ class Game(object):
         >>> Game._get_intersections(line_segs) == {
         ...     ('foo', 'bar'): (2, 2),
         ...     ('bar', 'foo'): (2, 2)
-        ... }
+        ... }  # doctest: +SKIP
         True
 
         """
@@ -156,10 +156,11 @@ class Game(object):
             for b_id, (b1, b2) in line_segs.items():
                 if a_id == b_id:
                     continue
-                intersection = seg_intersect(a1, a2, b1, b1)
+                intersection = seg_intersect(a1, a2, b1, b2)
                 if intersection:
                     intersections[(a_id, b_id)] = intersection
         # TODO: Find where line segments intersect multiple times, and return first intersections
+        # TODO: Don't skip test
         return intersections
 
     @asyncio.coroutine

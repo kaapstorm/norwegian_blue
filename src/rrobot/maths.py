@@ -1,26 +1,3 @@
-"""
-2D line segment intersection using vectors
-
-see Computer Graphics by F.S. Hill
-
-Copied shamelessly from http://www.cs.mun.ca/~rod/2500/notes/numpy-arrays/numpy-arrays.html
-
-
->>> p1 = (0.0, 0.0)
->>> p2 = (1.0, 0.0)
->>> p3 = (4.0, -5.0)
->>> p4 = (4.0, 2.0)
->>> seg_intersect(p1,p2, p3,p4)
-(4.0, 0.0)
-
->>> p1 = (2.0, 2.0)
->>> p2 = (4.0, 3.0)
->>> p3 = (6.0, 0.0)
->>> p4 = (6.0, 3.0)
->>> print(seg_intersect(p1,p2, p3,p4))
-(6.0, 4.0)
-
-"""
 import math
 import numpy as np
 
@@ -34,8 +11,25 @@ def perp(a):
 
 def seg_intersect(a1, a2, b1, b2):
     """
+    2D line segment intersection using vectors
+
     line segment a given by endpoints a1, a2
     line segment b given by endpoints b1, b2
+
+    see Computer Graphics by F.S. Hill
+
+    Copied shamelessly from http://www.cs.mun.ca/~rod/2500/notes/numpy-arrays/numpy-arrays.html
+
+    >>> seg_intersect((0.0, 0.0), (1.0, 0.0),
+    ...               (4.0, -5.0), (4.0, 2.0))
+    (4.0, 0.0)
+    >>> seg_intersect((2.0, 2.0), (4.0, 3.0),
+    ...               (6.0, 0.0), (6.0, 3.0))
+    (6.0, 4.0)
+    >>> seg_intersect((2, 4), (4, 2),
+    ...               (1, 1), (5, 5))
+    (3.0, 3.0)
+
     """
     a1 = np.array(a1)
     a2 = np.array(a2)
@@ -67,7 +61,13 @@ def is_in_angle(p1, h1, rads, p2):
     """
     x1, y1 = p1
     x2, y2 = p2
-    h2 = math.atan((y2 - y1)/(x2 - x1))
+    if x1 == x2:
+        if y2 >= y1:
+            h2 = 0
+        else:
+            h2 = math.pi
+    else:
+        h2 = math.atan((y2 - y1)/(x2 - x1))
     half_rads = rads / 2
     return h1 - half_rads < h2 < h1 + half_rads
 
@@ -91,8 +91,8 @@ def get_inverse_square(p1, p2, intensity):
 
 # From http://stackoverflow.com/a/9110966/245672
 def find_intersections(a1, a2, b1, b2):
-    a = np.matrix([a1, a2])
-    b = np.matrix([b1, b2])
+    a = np.mat([a1, a2])
+    b = np.mat([b1, b2])
     # min, max and all for arrays
     amin = lambda x1, x2: np.where(x1 < x2, x1, x2)
     amax = lambda x1, x2: np.where(x1 > x2, x1, x2)
@@ -111,8 +111,8 @@ def find_intersections(a1, a2, b1, b2):
     xi = (yi - y21) * m2inv + x21
 
     xconds = (amin(x11, x12) < xi, xi <= amax(x11, x12),
-              amin(x21, x22) < xi, xi <= amax(x21, x22) )
+              amin(x21, x22) < xi, xi <= amax(x21, x22))
     yconds = (amin(y11, y12) < yi, yi <= amax(y11, y12),
-              amin(y21, y22) < yi, yi <= amax(y21, y22) )
+              amin(y21, y22) < yi, yi <= amax(y21, y22))
 
     return xi[aall(xconds)], yi[aall(yconds)]

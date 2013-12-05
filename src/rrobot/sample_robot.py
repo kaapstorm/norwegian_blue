@@ -34,7 +34,14 @@ class MiddleBot(RobotBase):
         # Move to middle
         x_mid, y_mid = self._get_middle()
         # Set heading
-        rads = math.atan((y_mid - y)/(x_mid - x))
+        if x == x_mid:
+            # Horizontal
+            if y_mid >= y:
+                rads = 0  # To the right
+            else:
+                rads = math.pi  # To the left
+        else:
+            rads = math.atan((y_mid - y)/(x_mid - x))
         self.heading = rads
         # Set speed
         self.speed = settings['max_speed']
