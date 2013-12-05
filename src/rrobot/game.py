@@ -26,7 +26,7 @@ class Game(object):
         self._field = {}  # Dictionary of battlefield data, keyed by robot ID
         for robot_id, Robot in enumerate(robot_classes):
             self._field[robot_id] = {
-                'robot': Robot(robot_id),
+                'robot': Robot(self, robot_id),
                 'coords': (float(x_rand), float(y_rand)),
                 'speed': 0.0,
                 'damage': 0,
@@ -178,23 +178,24 @@ class Game(object):
     @asyncio.coroutine
     def run_robots(self):
         loop = asyncio.get_event_loop()
+        now = loop.time()
         for robot_id, data in self._field.items():
             logger.info('<{name} {robot_id}> started'.format(
                 name=data['robot'].__class__.__name__,
                 robot_id=robot_id))
-            # yield from data['robot'].started.send(data['coords'])  # TODO: Wait?
-            data['robot'].started.send(data['coords'])
-            data['then'] = loop.time()
+            #yield from data['robot'].started().send(data['coords'])  # TODO: Wait?
+            data['robot'].started().send(data['coords'])
+            data['then'] = now
 
         robot_ids = self.active_robots()
         while len(robot_ids) > 1:
             yield from self._update_radar(robot_ids)
             yield from self._move_robots(robot_ids)
+            asyncio.sleep(settings['radar_interval'] / 1000)
 
     def run(self):
-        asyncio.Task(self.run_robots())
         loop = asyncio.get_event_loop()
-        loop.run_until_complete()
+        loop.run_until_complete(self.run_robots())
 
         winners = self.active_robots()
         if len(winners):
@@ -208,7 +209,7 @@ def import_robots(robot_names):
     for robot_name in robot_names:
         module_name, class_name = robot_name.rsplit('.', 1)
         try:
-            module = __import__(module_name, globals(), locals(), class_name, -1)
+            module = __import__(module_name, globals(), locals(), class_name, 0)
             class_ = getattr(module, class_name)
         except ImportError:
             print('Unable to import "{}". Skipping robot.'.format(robot_name), file=sys.stderr)

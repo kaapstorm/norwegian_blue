@@ -19,28 +19,29 @@ class SampleRobot(RobotBase):
         """
         Called when the game starts
         """
-        x, y = yield
-        # Move to middle
-        x_mid, y_mid = self._get_middle()
-        # Set heading
-        rads = math.atan((y_mid - y)/(x_mid - x))
-        self.heading = rads
-        # Set speed
-        self.speed = 10
+        while True:
+            x, y = yield
+            # Move to middle
+            x_mid, y_mid = self._get_middle()
+            # Set heading
+            rads = math.atan((y_mid - y)/(x_mid - x))
+            self.heading = rads
+            # Set speed
+            self.speed = 10
 
     def attacked(self):
         """
-        Called when this robot is attacked by another robot
+        Called when this robot is attacked by another robot,
         """
         while True:
-            heading = yield
+            _ = yield
 
     def bumped(self):
         """
-        Called when this robot bumps or is bumped
+        Called when robot this bumps or is bumped
         """
         while True:
-            heading = yield
+            _ = yield
 
     def radar_updated(self):
         """

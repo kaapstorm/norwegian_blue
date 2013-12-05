@@ -1,5 +1,5 @@
 import asyncio
-from rrobot.game_client import GameClient
+#from rrobot.game_client import GameClient
 
 
 class RobotBase(object):
@@ -20,9 +20,8 @@ class RobotBase(object):
 
     The robot is notified of activity with the following coroutines:
      * started: The game is started. Starting coordinates are sent.
-     * bumped: The (absolute) heading of the bump is sent.
-     * attacked: The robot was successfully attacked by another robot. The
-                 (absolute) heading of the attack is sent.
+     * bumped: The robot collided with the border or another robot.
+     * attacked: The robot was successfully attacked by another robot.
      * radar_updated: This method is called at a regular interval with the
                       latest radar data. The interval is configured in
                       settings['radar_interval'].
@@ -34,30 +33,24 @@ class RobotBase(object):
         """
         Called when the game starts
 
-        The coroutine is sent a tuple of x-y coordinates of the robot, e.g.
-        (56, 32)
+        The coroutine is sent the coordinates of the robot, e.g. (56, 32)
         """
-        coords = yield
+        while True:
+            coords = yield
 
     def attacked(self):
         """
         Called when this robot is attacked by another robot,
-
-        The coroutine is sent the (absolute) heading in radians from which the
-        robot was attacked.
         """
         while True:
-            heading = yield
+            _ = yield
 
     def bumped(self):
         """
         Called when robot this bumps or is bumped
-
-        The coroutine is sent the (absolute) heading in radians where the
-        robot was bumped.
         """
         while True:
-            heading = yield
+            _ = yield
 
     def radar_updated(self):
         """
@@ -74,9 +67,9 @@ class RobotBase(object):
 
     # </METHODS_TO_OVERLOAD>
 
-    def __init__(self, id_):
-        self.__id = id_
-        self._client = GameClient()
+    def __init__(self, game, id_):
+        self._id = id_
+        self._game = game
         # Start coroutines
         next(self.started())
         next(self.attacked())
@@ -87,43 +80,37 @@ class RobotBase(object):
     @asyncio.coroutine
     def coords(self):
         """Coordinates (origin southwest corner of battlefield)"""
-        #return self._game.send_sync('get_coords', self.__id)
-        coords = yield from self._client.send_async('get_coords', self.__id)
+        coords = yield from self._game.get_coords(self._id)
         return coords
 
     @property
     @asyncio.coroutine
     def damage(self):
         """Damage rating of 0 to 99"""
-        #return self._game.send_sync('get_damage', self.__id)
-        damage = yield from self._client.send_async('get_damage', self.__id)
+        damage = yield from self._game.get_damage(self._id)
         return damage
 
     @property
     @asyncio.coroutine
     def heading(self):
         """Heading (radians counterclockwise from east)"""
-        #return self._game.send_sync('get_heading', self.__id)
-        rads = yield from self._client.send_async('get_heading', self.__id)
+        rads = yield from self._game.get_heading(self._id)
         return rads
 
     @heading.setter
     def heading(self, rads):
-        #self.__heading.send(rads)
-        self._client.send_async('set_heading', self.__id, rads)
+        self._game.set_heading(self._id, rads)
 
     @property
     @asyncio.coroutine
     def speed(self):
         """Speed (metres per second)"""
-        #return self._game.send_sync('get_speed', self.__id)
-        mps = yield from self._client.send_async('get_speed', self.__id)
+        mps = yield from self._game.get_speed(self._id)
         return mps
 
     @speed.setter
     def speed(self, mps):
-        #self.__speed.send(mps)
-        self._client.send_async('set_speed', self.__id, mps)
+        self._game.set_speed(self._id, mps)
 
     def attack(self):
-        self._client.send_async('attack', self.__id)
+        self._game.attack(self._id)
