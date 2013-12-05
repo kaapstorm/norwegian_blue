@@ -5,7 +5,7 @@ import logging
 import random
 import sys
 from rrobot.settings import settings
-from rrobot.maths import seg_intersect
+from rrobot.maths import seg_intersect, is_in_angle, get_inverse_square
 
 
 # TODO: Add power. Attacks, accelleration, and maintaining speed cost power
@@ -64,8 +64,33 @@ class Game(object):
         self._set_robot_attr(robot_id, 'speed', mps)
 
     def attack(self, robot_id):
-        # TODO: attack
-        pass
+        """
+        Attacking is modelled on a Claymore. Damage is determined by the
+        `inverse square`_ of the distance.
+
+
+        .. _inverse square: http://en.wikipedia.org/wiki/Inverse-square_law
+        """
+        attacker = self._field[robot_id]
+        logger.info('<{name} {robot_id}> attack'.format(
+            name=attacker['robot'].__class__.__name__,
+            robot_id=robot_id))
+
+        for target_id in self.active_robots():
+            target = self._field[target_id]
+            if is_in_angle(attacker['coords'],
+                           attacker['heading'],
+                           settings['attack_angle'],
+                           target['coords']):
+                damage = get_inverse_square(attacker['coords'],
+                                            target['coords'],
+                                            settings['attack_damage'])
+                logger.info('<{name} {robot_id}> suffered {damage} damage'.format(
+                    name=target['robot'].__class__.__name__,
+                    robot_id=robot_id,
+                    damage=damage))
+                target['damage'] += damage
+                target['robot'].attacked().send(attacker['robot'].__class__.__name__)
 
     def active_robots(self):
         """
@@ -92,7 +117,7 @@ class Game(object):
         # Calc new position
         x, y = data['coords']
         t_d = now - data['then']
-        dist = data['speed'] * t_d
+        dist = data['speed'] * t_d  # speed is m/s; TODO: Convert t_d to seconds
         x_d = math.cos(data['heading']) * dist
         y_d = math.sin(data['heading']) * dist
         x_new, y_new = x + x_d, y + y_d
@@ -142,6 +167,7 @@ class Game(object):
         # Calculate moves as line segments
         loop = asyncio.get_event_loop()
         now = loop.time()
+        logger.debug('Tick: {}'.format(now))
         x_max, y_max = settings['battlefield_size']
         line_segs = {
             'left': ((0, 0), (0, y_max)),
@@ -168,12 +194,17 @@ class Game(object):
                 'coords': line_segs[robot_id][1],
                 'then': now
             })
-        # Notify bumped robots
+        # Stop bumped robots and notify them
         for (a_id, b_id) in bumps.keys():
             if isinstance(a_id, str):
                 # a_id is a border
                 continue
-            self._field[a_id]['robot'].bumped().send(None)
+            if isinstance(b_id, str):
+                bumper = b_id
+            else:
+                bumper = self._field[b_id]['robot'].__class__.__name__
+            self.set_speed(a_id, 0)
+            self._field[a_id]['robot'].bumped().send(bumper)
 
     @asyncio.coroutine
     def run_robots(self):

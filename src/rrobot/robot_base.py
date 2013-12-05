@@ -31,30 +31,35 @@ class RobotBase(object):
 
     def started(self):
         """
-        Called when the game starts
+        Coroutine, called when the game starts
 
-        The coroutine is sent the coordinates of the robot, e.g. (56, 32)
+        Is sent the coordinates of this robot, e.g. (56, 32)
         """
         while True:
             coords = yield
 
     def attacked(self):
         """
-        Called when this robot is attacked by another robot,
+        Coroutine, called when this robot is attacked by another robot
+
+        Is sent the class name of the attacking robot
         """
         while True:
-            _ = yield
+            attacker = yield
 
     def bumped(self):
         """
-        Called when robot this bumps or is bumped
+        Coroutine, called when this robot bumps another robot or a boundary
+
+        Is sent the class name of the other robot, or "top", "bottom", "left"
+        or "right"
         """
         while True:
-            _ = yield
+            bumper = yield
 
     def radar_updated(self):
         """
-        Called at a regular interval.
+        Coroutine, called at the regular interval settings['radar_interval']
 
         The coroutine is sent a dictionary of coordinates and robot class
         names, e.g. ::
