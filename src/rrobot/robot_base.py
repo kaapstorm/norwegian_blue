@@ -72,10 +72,11 @@ class RobotBase(object):
         """
         Coroutine, called at the regular interval settings['radar_interval']
 
-        The coroutine is sent a dictionary of coordinates and robot class
+        The coroutine is sent a list of coordinates and robot class
         names, e.g. ::
 
-            {(15, 40): 'Clango', (56, 32): 'Daneel'}
+            [{'name': 'Clango', 'coords': (15, 40)},
+             {'name': 'Daneel', 'coords': (56, 32)}]
 
         """
         while True:

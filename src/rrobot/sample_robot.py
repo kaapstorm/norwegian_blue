@@ -77,13 +77,20 @@ class HunterKiller(RobotBase):
     Chases the closest robot, attacking it constantly.
     """
     def _find_closest(self, radar, coords=None):
+        """
+        Find the closest other robot.
+
+        Returns coordinates, distance.
+        """
         if coords is None:
             coords = self.coords
         x, y = coords
         d_c = x_c = y_c = None
-        for (x_r, y_r), name in radar.items():
-            if x_r == x and y_r == y:
-                continue  # It's me
+        for data in radar:
+            x_r, y_r = data['coords']
+            name = data['name']
+            if name == self.__class__.__name__:
+                continue
             d = math.sqrt((x_r - x) ** 2 + (y_r - y) ** 2)
             if d_c is None or d < d_c:
                 d_c = d
@@ -95,9 +102,10 @@ class HunterKiller(RobotBase):
     def radar_updated(self):
         while True:
             radar = yield
-            x, y = coords = self.coords
+            coords = self.coords
+            x, y = coords
             (x_c, y_c), d_c = self._find_closest(radar, coords)
-            if d_c is not None:  # d_c is None if there are no other robots
+            if d_c is not None:  # distance to closest is None if there are no other robots
                 rads = math.atan((y_c - y)/(x_c - x))
                 self.heading = rads
                 # Hunt

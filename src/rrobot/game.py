@@ -23,8 +23,8 @@ class Game(object):
         self._turn = 0  # Turn is used to detect stalemate
         self._robots = []  # List of robots in the game
         x_max, y_max = settings['battlefield_size']
-        x_rand, y_rand = random.randrange(0, x_max), random.randrange(0, y_max)
         for robot_id, Robot in enumerate(robot_classes):
+            x_rand, y_rand = random.randrange(0, x_max), random.randrange(0, y_max)
             self._robots.append({
                 'instance': Robot(self, robot_id),
                 'coords': (float(x_rand), float(y_rand)),
@@ -129,7 +129,7 @@ class Game(object):
 
     @asyncio.coroutine
     def _update_radar(self, robots):
-        radar = {r['coords']: r['instance'].__class__.__name__ for r in self._robots}
+        radar = [{'name': r['instance'].__class__.__name__, 'coords': r['coords']} for r in self._robots]
         for robot in robots:
             logger.info('<{name} {robot_id}> radar_updated'.format(
                 name=robot['instance'].__class__.__name__,
@@ -249,8 +249,8 @@ def import_robots(robot_names):
     return classes
 
 
-def main(args):
-    robot_classes = import_robots(args.robot_names)
+def main(parser_args):
+    robot_classes = import_robots(parser_args.robot_names)
     game = Game(robot_classes)
     winners = game.run()
     if len(winners) > 1:
