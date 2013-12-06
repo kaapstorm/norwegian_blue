@@ -84,44 +84,44 @@ class RobotBase(object):
     # </METHODS_TO_OVERLOAD>
 
     def __init__(self, game, id_):
-        self._id = id_
+        self.id = id_
         self._game = game
 
     @property
     @asyncio.coroutine
     def coords(self):
         """Coordinates (origin southwest corner of battlefield)"""
-        coords = yield from self._game.get_coords(self._id)
+        coords = yield from self._game.get_coords(self.id)
         return coords
 
     @property
     @asyncio.coroutine
     def damage(self):
         """Damage rating of 0 to 99"""
-        damage = yield from self._game.get_damage(self._id)
+        damage = yield from self._game.get_damage(self.id)
         return damage
 
     @property
     @asyncio.coroutine
     def heading(self):
         """Heading (radians counterclockwise from east)"""
-        rads = yield from self._game.get_heading(self._id)
+        rads = yield from self._game.get_heading(self.id)
         return rads
 
     @heading.setter
     def heading(self, rads):
-        self._game.set_heading(self._id, rads)
+        self._game.set_heading(self.id, rads)
 
     @property
     @asyncio.coroutine
     def speed(self):
         """Speed (metres per second)"""
-        mps = yield from self._game.get_speed(self._id)
+        mps = yield from self._game.get_speed(self.id)
         return mps
 
     @speed.setter
     def speed(self, mps):
-        self._game.set_speed(self._id, mps)
+        self._game.set_speed(self.id, mps)
 
     def attack(self):
-        self._game.attack(self._id)
+        self._game.attack(self.id)

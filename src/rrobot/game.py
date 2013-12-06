@@ -21,29 +21,29 @@ class Game(object):
         with them.
         """
         self._turn = 0  # Turn is used to detect stalemate
-        self._field = {}  # Dictionary of battlefield data, keyed by robot ID
+        self._robots = []  # List of robots in the game
         x_max, y_max = settings['battlefield_size']
         x_rand, y_rand = random.randrange(0, x_max), random.randrange(0, y_max)
         for robot_id, Robot in enumerate(robot_classes):
-            self._field[robot_id] = {
-                'robot': Robot(self, robot_id),
+            self._robots.append({
+                'instance': Robot(self, robot_id),
                 'coords': (float(x_rand), float(y_rand)),
                 'speed': 0.0,
                 'damage': 0,
                 'heading': 0.0,
                 'then': None  # Timestamp of last move
-            }
+            })
 
     def _get_robot_attr(self, robot_id, attr):
-        return self._field[robot_id][attr]
+        return self._robots[robot_id][attr]
 
     def _set_robot_attr(self, robot_id, attr, value):
         logger.info('<{name} {robot_id}> {attr} = {value!r}'.format(
-            name=self._field[robot_id].__class__.__name__,
+            name=self._robots[robot_id].__class__.__name__,
             robot_id=robot_id,
             attr=attr,
             value=value))
-        self._field[robot_id][attr] = value
+        self._robots[robot_id][attr] = value
 
     def get_coords(self, robot_id):
         return self._get_robot_attr(robot_id, 'coords')
@@ -72,13 +72,13 @@ class Game(object):
 
         .. _inverse square: http://en.wikipedia.org/wiki/Inverse-square_law
         """
-        attacker = self._field[robot_id]
+        attacker = self._robots[robot_id]
         logger.info('<{name} {robot_id}> attack'.format(
-            name=attacker['robot'].__class__.__name__,
+            name=attacker['instance'].__class__.__name__,
             robot_id=robot_id))
 
         for target_id in self.active_robots():
-            target = self._field[target_id]
+            target = self._robots[target_id]
             if is_in_angle(attacker['coords'],
                            attacker['heading'],
                            settings['attack_angle'],
@@ -90,17 +90,17 @@ class Game(object):
                 # TODO: Make sure distance is always greater than 0
                 damage = min(damage, settings['attack_damage'])
                 logger.info('<{name} {robot_id}> suffered {damage} damage'.format(
-                    name=target['robot'].__class__.__name__,
+                    name=target['instance'].__class__.__name__,
                     robot_id=robot_id,
                     damage=damage))
                 target['damage'] += damage
-                target['robot'].attacked().send(attacker['robot'].__class__.__name__)
+                target['instance'].attacked().send(attacker['instance'].__class__.__name__)
 
     def active_robots(self):
         """
         Returns a set of robot IDs with damage < 100%
         """
-        return {i for i, d in self._field.items() if d['damage'] < 100}
+        return [r for r in self._robots if r['damage'] < 100]
 
     @staticmethod
     def _get_line_seg(data, now):
@@ -125,17 +125,16 @@ class Game(object):
         x_d = math.cos(data['heading']) * dist
         y_d = math.sin(data['heading']) * dist
         x_new, y_new = x + x_d, y + y_d
-        return ((x, y), (x_new, y_new))
+        return (x, y), (x_new, y_new)
 
     @asyncio.coroutine
-    def _update_radar(self, robot_ids):
-        radar = {d['coords']: d['robot'].__class__.__name__ for d in self._field.values()}
-        for robot_id in robot_ids:
+    def _update_radar(self, robots):
+        radar = {r['coords']: r['instance'].__class__.__name__ for r in self._robots}
+        for robot in robots:
             logger.info('<{name} {robot_id}> radar_updated'.format(
-                name=self._field[robot_id]['robot'].__class__.__name__,
-                robot_id=robot_id))
-            # yield from self._field[robot_id]['robot'].radar_updated().send(radar)  # TODO: Wait?
-            self._field[robot_id]['robot'].radar_updated().send(radar)
+                name=robot['instance'].__class__.__name__,
+                robot_id=robot['instance'].id))
+            robot['instance'].radar_updated().send(radar)
 
     @staticmethod
     def _get_intersections(line_segs):
@@ -168,7 +167,7 @@ class Game(object):
         return intersections
 
     @asyncio.coroutine
-    def _move_robots(self, robot_ids):
+    def _move_robots(self, robots):
         # Calculate moves as line segments
         loop = asyncio.get_event_loop()
         now = loop.time()
@@ -180,9 +179,8 @@ class Game(object):
             'right': [(x_max, y_max), (x_max, 0)],
             'bottom': [(x_max, 0), (0, 0)]
         }
-        for robot_id in robot_ids:
-            data = self._field[robot_id]
-            line_segs[robot_id] = list(self._get_line_seg(data, now))
+        for robot in robots:
+            line_segs[robot['instance'].id] = list(self._get_line_seg(robot, now))
         # Calculate bumps as intersections of line segments
         bumps = self._get_intersections(line_segs)
         for (a_id, b_id), coords in bumps.items():
@@ -193,10 +191,9 @@ class Game(object):
             # TODO: Do not put robots on top of each other
             line_segs[a_id][1] = coords
         # Move robots to "to" points
-        for robot_id in robot_ids:
-            data = self._field[robot_id]
-            data.update({
-                'coords': line_segs[robot_id][1],
+        for robot in robots:
+            robot.update({
+                'coords': line_segs[robot['instance'].id][1],
                 'then': now
             })
         # Stop bumped robots and notify them
@@ -207,35 +204,34 @@ class Game(object):
             if isinstance(b_id, str):
                 bumper = b_id
             else:
-                bumper = self._field[b_id]['robot'].__class__.__name__
+                bumper = self._robots[b_id]['instance'].__class__.__name__
             self.set_speed(a_id, 0)
-            self._field[a_id]['robot'].bumped().send(bumper)
+            self._robots[a_id]['instance'].bumped().send(bumper)
 
     @asyncio.coroutine
     def run_robots(self):
         loop = asyncio.get_event_loop()
         now = loop.time()
-        for robot_id, data in self._field.items():
+        for robot in self._robots:
             logger.info('<{name} {robot_id}> started'.format(
-                name=data['robot'].__class__.__name__,
-                robot_id=robot_id))
-            data['robot'].started().send(data['coords'])
-            data['then'] = now
+                name=robot['instance'].__class__.__name__,
+                robot_id=robot['instance'].id))
+            robot['instance'].started().send(robot['coords'])
+            robot['then'] = now
 
-        robot_ids = self.active_robots()
-        while len(robot_ids) > 1 and self._turn < settings['max_turns']:
+        robots = self.active_robots()
+        while len(robots) > 1 and self._turn < settings['max_turns']:
             self._turn += 1
-            yield from self._update_radar(robot_ids)
-            yield from self._move_robots(robot_ids)
+            yield from self._update_radar(robots)
+            yield from self._move_robots(robots)
             asyncio.sleep(settings['radar_interval'] / 1000)
 
     def run(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.run_robots())
 
-        winners = ["{} (damage {})".format(self._field[id_]['robot'].__class__.__name__,
-                                            self._field[id_]['damage'])
-                   for id_ in self.active_robots()]
+        winners = ["{} (damage {})".format(r['instance'].__class__.__name__, r['damage'])
+                   for r in self.active_robots()]
         return winners
 
 
@@ -253,13 +249,9 @@ def import_robots(robot_names):
     return classes
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('robot_names', nargs='+', help='names of robot classes')
-    args = parser.parse_args()
-
-    Robots = import_robots(args.robot_names)
-    game = Game(Robots)
+def main(args):
+    robot_classes = import_robots(args.robot_names)
+    game = Game(robot_classes)
     winners = game.run()
     if len(winners) > 1:
         print('Stalemate. The survivors are ' + ', '.join(winners))
@@ -267,3 +259,10 @@ if __name__ == '__main__':
         print('The winner is ' + winners[0])
     else:
         print('All robots were destroyed')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('robot_names', nargs='+', help='names of robot classes')
+    args = parser.parse_args()
+    main(args)

@@ -76,11 +76,38 @@ class HunterKiller(RobotBase):
     """
     Chases the closest robot, attacking it constantly.
     """
+    def _find_closest(self, radar, coords=None):
+        if coords is None:
+            coords = self.coords
+        x, y = coords
+        d_c = x_c = y_c = None
+        for (x_r, y_r), name in radar.items():
+            if x_r == x and y_r == y:
+                continue  # It's me
+            d = math.sqrt((x_r - x) ** 2 + (y_r - y) ** 2)
+            if d_c is None or d < d_c:
+                d_c = d
+                x_c = x_r
+                y_c = y_r
+        return (x_c, y_c), d_c
+
     @coroutine
     def radar_updated(self):
-        """
-        Called at a regular interval.
-        """
         while True:
             radar = yield
-            # TODO: hunt, kill
+            x, y = coords = self.coords
+            (x_c, y_c), d_c = self._find_closest(radar, coords)
+            if d_c is not None:  # d_c is None if there are no other robots
+                rads = math.atan((y_c - y)/(x_c - x))
+                self.heading = rads
+                # Hunt
+                self.speed = settings['max_speed']
+                # Kill. Attacking is free. Why not do it all the time?
+                self.attack()
+
+
+if __name__ == '__main__':
+    from rrobot.game import Game
+    game = Game([MiddleBot, HunterKiller])
+    winners = game.run()
+    print(winners)
