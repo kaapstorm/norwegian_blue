@@ -115,7 +115,7 @@ class Game(object):
         ...     'heading': 0
         ... }
         >>> Game._get_line_seg(data, 2)
-        ((2, 2), (7.0, 2.0))
+        [(2, 2), (7.0, 2.0)]
 
         """
         # Calc new position
