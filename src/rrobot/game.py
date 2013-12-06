@@ -115,7 +115,7 @@ class Game(object):
         ...     'heading': 0
         ... }
         >>> Game._get_line_seg(data, 2)
-        [(2, 2), (7.0, 2.0)]
+        ((2, 2), (7.0, 2.0))
 
         """
         # Calc new position
@@ -125,7 +125,7 @@ class Game(object):
         x_d = math.cos(data['heading']) * dist
         y_d = math.sin(data['heading']) * dist
         x_new, y_new = x + x_d, y + y_d
-        return [(x, y), (x_new, y_new)]
+        return ((x, y), (x_new, y_new))
 
     @asyncio.coroutine
     def _update_radar(self, robot_ids):
@@ -182,7 +182,7 @@ class Game(object):
         }
         for robot_id in robot_ids:
             data = self._field[robot_id]
-            line_segs[robot_id] = self._get_line_seg(data, now)
+            line_segs[robot_id] = list(self._get_line_seg(data, now))
         # Calculate bumps as intersections of line segments
         bumps = self._get_intersections(line_segs)
         for (a_id, b_id), coords in bumps.items():
