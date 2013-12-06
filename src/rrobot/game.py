@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import argparse
 import math
 import asyncio
@@ -55,6 +56,7 @@ class Game(object):
 
     def set_heading(self, robot_id, rads):
         self._set_robot_attr(robot_id, 'heading', rads)
+        logger.debug('({}°)'.format(int(math.degrees(rads))))
 
     def get_speed(self, robot_id):
         return self._get_robot_attr(robot_id, 'speed')
@@ -215,7 +217,9 @@ class Game(object):
         loop = asyncio.get_event_loop()
         now = loop.time()
         for robot in self._robots:
-            logger.info('{robot} started'.format(robot=robot['instance']))
+            logger.info('{robot} started at {coords}'.format(
+                robot=robot['instance'],
+                coords=robot['coords']))
             robot['instance'].started().send(robot['coords'])
             robot['then'] = now
 
