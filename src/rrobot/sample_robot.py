@@ -6,6 +6,7 @@ overload.
 
 """
 import math
+from rrobot.maths import get_heading_p2p
 from rrobot.robot_base import RobotBase, coroutine
 from rrobot.settings import settings
 
@@ -32,17 +33,9 @@ class MiddleBot(RobotBase):
             coords = self.coords
         x, y = coords
         # Move to middle
-        x_mid, y_mid = self._get_middle()
+        middle = self._get_middle()
         # Set heading
-        if x == x_mid:
-            # Horizontal
-            if y_mid >= y:
-                rads = 0  # To the right
-            else:
-                rads = math.pi  # To the left
-        else:
-            rads = math.atan((y_mid - y)/(x_mid - x))
-        self.heading = rads
+        self.heading = get_heading_p2p(coords, middle)
         # Set speed
         self.speed = settings['max_speed']
 
@@ -85,29 +78,26 @@ class HunterKiller(RobotBase):
         if coords is None:
             coords = self.coords
         x, y = coords
-        d_c = x_c = y_c = None
-        for data in radar:
-            x_r, y_r = data['coords']
-            name = data['name']
+        dist = closest = None
+        for robot in radar:
+            x_r, y_r = robot['coords']
+            name = robot['name']
             if name == self.__class__.__name__:
                 continue
             d = math.sqrt((x_r - x) ** 2 + (y_r - y) ** 2)
-            if d_c is None or d < d_c:
-                d_c = d
-                x_c = x_r
-                y_c = y_r
-        return (x_c, y_c), d_c
+            if dist is None or d < dist:
+                dist = d
+                closest = (x_r, y_r)
+        return closest, dist
 
     @coroutine
     def radar_updated(self):
         while True:
             radar = yield
             coords = self.coords
-            x, y = coords
-            (x_c, y_c), d_c = self._find_closest(radar, coords)
-            if d_c is not None:  # distance to closest is None if there are no other robots
-                rads = math.atan((y_c - y)/(x_c - x))
-                self.heading = rads
+            closest, dist = self._find_closest(radar, coords)
+            if dist is not None:  # distance to closest is None if there are no other robots
+                self.heading = get_heading_p2p(coords, closest)
                 # Hunt
                 self.speed = settings['max_speed']
                 # Kill. Attacking is free. Why not do it all the time?

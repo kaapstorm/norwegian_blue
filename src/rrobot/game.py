@@ -39,7 +39,7 @@ class Game(object):
 
     def _set_robot_attr(self, robot_id, attr, value):
         logger.info('<{name} {robot_id}> {attr} = {value!r}'.format(
-            name=self._robots[robot_id].__class__.__name__,
+            name=self._robots[robot_id]['instance'].__class__.__name__,
             robot_id=robot_id,
             attr=attr,
             value=value))
@@ -132,6 +132,7 @@ class Game(object):
     @asyncio.coroutine
     def _update_radar(self, robots):
         radar = [{'name': r['instance'].__class__.__name__, 'coords': r['coords']} for r in self._robots]
+        logger.info('Radar: %s', radar)
         for robot in robots:
             logger.info('<{name} {robot_id}> radar_updated'.format(
                 name=robot['instance'].__class__.__name__,
@@ -173,7 +174,6 @@ class Game(object):
         # Calculate moves as line segments
         loop = asyncio.get_event_loop()
         now = loop.time()
-        logger.debug('Tick: {}'.format(now))
         x_max, y_max = settings['battlefield_size']
         line_segs = {
             'left': [(0, 0), (0, y_max)],
@@ -207,6 +207,11 @@ class Game(object):
                 bumper = b_id
             else:
                 bumper = self._robots[b_id]['instance'].__class__.__name__
+            logger.info('<{name} {id1}> bumped <{bumper} {id2}>'.format(
+                name=self._robots[a_id]['instance'].__class__.__name__,
+                id1=a_id,
+                bumper=bumper,
+                id2=b_id))
             self.set_speed(a_id, 0)
             self._robots[a_id]['instance'].bumped().send(bumper)
 
@@ -224,9 +229,11 @@ class Game(object):
         robots = self.active_robots()
         while len(robots) > 1 and self._turn < settings['max_turns']:
             self._turn += 1
+            logger.info('----------------------------------------')
+            logger.info('Turn %s; time %s', self._turn, loop.time())
             yield from self._update_radar(robots)
             yield from self._move_robots(robots)
-            asyncio.sleep(settings['radar_interval'] / 1000)
+            yield from asyncio.sleep(settings['radar_interval'] / 1000)
 
     def run(self):
         loop = asyncio.get_event_loop()
@@ -252,6 +259,9 @@ def import_robots(robot_names):
 
 
 def main(parser_args):
+    logger.addHandler(logging.StreamHandler(sys.stderr))
+    logger.setLevel(settings['log_level'])
+    logger.debug('Robots: %s', parser_args.robot_names)
     robot_classes = import_robots(parser_args.robot_names)
     game = Game(robot_classes)
     winners = game.run()

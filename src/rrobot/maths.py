@@ -93,6 +93,27 @@ def get_inverse_square(p1, p2, intensity):
     return intensity / (r ** 2)
 
 
+def get_heading_p2p(p1, p2):
+    """
+    Return the heading from p1 to p2 in radians
+
+    >>> get_heading_p2p((1, 1), (2, 2))
+    0.7853981633974483
+
+    """
+    x1, y1 = p1
+    x2, y2 = p2
+    if x1 == x2:
+        # Horizontal
+        if y2 >= y1:
+            rads = 0  # To the right
+        else:
+            rads = math.pi  # To the left
+    else:
+        rads = math.atan((y2 - y1)/(x2 - x1))
+    return rads
+
+
 # From http://stackoverflow.com/a/9110966/245672
 def find_intersections(a1, a2, b1, b2):
     a = np.mat([a1, a2])
