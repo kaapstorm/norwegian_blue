@@ -1,9 +1,10 @@
 Norwegiɑn Blue rrɒbot
 =====================
 
-    "Remarkable machine, the Norwegiɑn Blue rrɒbot."
+    "Remarkable rrɒbot, the Norwegiɑn Blue, id'n it, ay?" -- A pet shop keeper
+    (sort of)
 
-Norwegiɑn Blue rrɒbot (pronounced "norwegiɑn blue robot") is primarily an
+Norwegiɑn Blue rrɒbot (pronounced "norwegian blue robot") is primarily an
 exercise in asynchronous programming in Python using the asyncio library,
 available from Python 3.3 and incorporated in the standard library from Python
 3.4.
