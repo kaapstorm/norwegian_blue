@@ -16,13 +16,13 @@ How to write a robot
 Extend the RobotBase class, and implement one or more of the following
 methods:
 
-  * started, which is called when the game starts
+* started, which is called when the game starts
 
-  * attacked, which is called when your robot is attacked by another robot
+* attacked, which is called when your robot is attacked by another robot
 
-  * bumped, which is called when your robot bumps or is bumped
+* bumped, which is called when your robot bumps or is bumped
 
-  * radar_updated, which is called at a (configurable) regular interval
+* radar_updated, which is called at a (configurable) regular interval
 
 Each method is a coroutine, and is sent relevant data.
 
