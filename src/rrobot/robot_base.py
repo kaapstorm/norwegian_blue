@@ -90,6 +90,9 @@ class RobotBase(object):
         self.id = id_
         self._game = game
 
+    def __str__(self):
+        return '<Robot {} {}>'.format(self.id, self.__class__.__name__)
+
     @property
     def coords(self):
         """Coordinates (origin southwest corner of battlefield)"""

@@ -38,9 +38,8 @@ class Game(object):
         return self._robots[robot_id][attr]
 
     def _set_robot_attr(self, robot_id, attr, value):
-        logger.info('<{name} {robot_id}> {attr} = {value!r}'.format(
-            name=self._robots[robot_id]['instance'].__class__.__name__,
-            robot_id=robot_id,
+        logger.info('{robot} {attr} = {value!r}'.format(
+            robot=self._robots[robot_id]['instance'],
             attr=attr,
             value=value))
         self._robots[robot_id][attr] = value
@@ -73,9 +72,7 @@ class Game(object):
         .. _inverse square: http://en.wikipedia.org/wiki/Inverse-square_law
         """
         attacker = self._robots[robot_id]
-        logger.info('<{name} {robot_id}> attack'.format(
-            name=attacker['instance'].__class__.__name__,
-            robot_id=robot_id))
+        logger.info('{robot} attack'.format(robot=attacker['instance']))
 
         for target in self.active_robots():
             if is_in_angle(attacker['coords'],
@@ -91,9 +88,8 @@ class Game(object):
                                                         target['coords'],
                                                         settings['attack_damage'])))
                 if damage:
-                    logger.info('<{name} {robot_id}> suffered {damage} damage'.format(
-                        name=target['instance'].__class__.__name__,
-                        robot_id=robot_id,
+                    logger.info('{robot} suffered {damage} damage'.format(
+                        robot=target['instance'],
                         damage=damage))
                     target['damage'] += damage
                     target['instance'].attacked().send(attacker['instance'].__class__.__name__)
@@ -134,9 +130,7 @@ class Game(object):
         radar = [{'name': r['instance'].__class__.__name__, 'coords': r['coords']} for r in self._robots]
         logger.info('Radar: %s', radar)
         for robot in robots:
-            logger.info('<{name} {robot_id}> radar_updated'.format(
-                name=robot['instance'].__class__.__name__,
-                robot_id=robot['instance'].id))
+            logger.info('{robot} radar updated'.format(robot=robot['instance']))
             robot['instance'].radar_updated().send(radar)
 
     @staticmethod
@@ -205,13 +199,14 @@ class Game(object):
                 continue
             if isinstance(b_id, str):
                 bumper = b_id
+                logger.info('{robot} bumped {bumper} boundary'.format(
+                    robot=self._robots[a_id]['instance'],
+                    bumper=bumper))
             else:
                 bumper = self._robots[b_id]['instance'].__class__.__name__
-            logger.info('<{name} {id1}> bumped <{bumper} {id2}>'.format(
-                name=self._robots[a_id]['instance'].__class__.__name__,
-                id1=a_id,
-                bumper=bumper,
-                id2=b_id))
+                logger.info('{robot} bumped {bumper}'.format(
+                    robot=self._robots[a_id]['instance'],
+                    bumper=self._robots[b_id]['instance']))
             self.set_speed(a_id, 0)
             self._robots[a_id]['instance'].bumped().send(bumper)
 
@@ -220,9 +215,7 @@ class Game(object):
         loop = asyncio.get_event_loop()
         now = loop.time()
         for robot in self._robots:
-            logger.info('<{name} {robot_id}> started'.format(
-                name=robot['instance'].__class__.__name__,
-                robot_id=robot['instance'].id))
+            logger.info('{robot} started'.format(robot=robot['instance']))
             robot['instance'].started().send(robot['coords'])
             robot['then'] = now
 
@@ -230,7 +223,8 @@ class Game(object):
         while len(robots) > 1 and self._turn < settings['max_turns']:
             self._turn += 1
             logger.info('----------------------------------------')
-            logger.info('Turn %s; time %s', self._turn, loop.time())
+            logger.info('Turn: %s', self._turn)
+            logger.info('Time: %s', loop.time())
             yield from self._update_radar(robots)
             yield from self._move_robots(robots)
             yield from asyncio.sleep(settings['radar_interval'] / 1000)
@@ -252,7 +246,7 @@ def import_robots(robot_names):
             module = __import__(module_name, globals(), locals(), class_name, 0)
             class_ = getattr(module, class_name)
         except ImportError:
-            print('Unable to import "{}". Skipping robot.'.format(robot_name), file=sys.stderr)
+            logger.error('Unable to import "{}". Skipping robot.'.format(robot_name))
             continue
         classes.append(class_)
     return classes
@@ -261,7 +255,7 @@ def import_robots(robot_names):
 def main(parser_args):
     logger.addHandler(logging.StreamHandler(sys.stderr))
     logger.setLevel(settings['log_level'])
-    logger.debug('Robots: %s', parser_args.robot_names)
+    logger.info('Robots: {}'.format(parser_args.robot_names))
     robot_classes = import_robots(parser_args.robot_names)
     game = Game(robot_classes)
     winners = game.run()
