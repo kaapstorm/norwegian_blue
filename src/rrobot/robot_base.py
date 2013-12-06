@@ -1,5 +1,12 @@
 import asyncio
-#from rrobot.game_client import GameClient
+
+
+def coroutine(func):
+    def start(*args, **kwargs):
+        coro = func(*args, **kwargs)
+        coro.send(None)
+        return coro
+    return start
 
 
 class RobotBase(object):
@@ -29,6 +36,7 @@ class RobotBase(object):
     """
     # <METHODS_TO_OVERLOAD>
 
+    @coroutine
     def started(self):
         """
         Coroutine, called when the game starts
@@ -38,6 +46,7 @@ class RobotBase(object):
         while True:
             coords = yield
 
+    @coroutine
     def attacked(self):
         """
         Coroutine, called when this robot is attacked by another robot
@@ -47,6 +56,7 @@ class RobotBase(object):
         while True:
             attacker = yield
 
+    @coroutine
     def bumped(self):
         """
         Coroutine, called when this robot bumps another robot or a boundary
@@ -57,6 +67,7 @@ class RobotBase(object):
         while True:
             bumper = yield
 
+    @coroutine
     def radar_updated(self):
         """
         Coroutine, called at the regular interval settings['radar_interval']
@@ -75,11 +86,6 @@ class RobotBase(object):
     def __init__(self, game, id_):
         self._id = id_
         self._game = game
-        # Start coroutines
-        next(self.started())
-        next(self.attacked())
-        next(self.bumped())
-        next(self.radar_updated())
 
     @property
     @asyncio.coroutine

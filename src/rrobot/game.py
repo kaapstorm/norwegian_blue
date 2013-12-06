@@ -20,9 +20,10 @@ class Game(object):
         Accepts an iterable of Robot classes, and initialises a battlefield
         with them.
         """
+        self._turn = 0  # Turn is used to detect stalemate
+        self._field = {}  # Dictionary of battlefield data, keyed by robot ID
         x_max, y_max = settings['battlefield_size']
         x_rand, y_rand = random.randrange(0, x_max), random.randrange(0, y_max)
-        self._field = {}  # Dictionary of battlefield data, keyed by robot ID
         for robot_id, Robot in enumerate(robot_classes):
             self._field[robot_id] = {
                 'robot': Robot(self, robot_id),
@@ -85,6 +86,9 @@ class Game(object):
                 damage = get_inverse_square(attacker['coords'],
                                             target['coords'],
                                             settings['attack_damage'])
+                # Because we still put robots on top of one another, reduce damage to max
+                # TODO: Make sure distance is always greater than 0
+                damage = min(damage, settings['attack_damage'])
                 logger.info('<{name} {robot_id}> suffered {damage} damage'.format(
                     name=target['robot'].__class__.__name__,
                     robot_id=robot_id,
@@ -121,7 +125,7 @@ class Game(object):
         x_d = math.cos(data['heading']) * dist
         y_d = math.sin(data['heading']) * dist
         x_new, y_new = x + x_d, y + y_d
-        return (x, y), (x_new, y_new)
+        return [(x, y), (x_new, y_new)]
 
     @asyncio.coroutine
     def _update_radar(self, robot_ids):
@@ -171,10 +175,10 @@ class Game(object):
         logger.debug('Tick: {}'.format(now))
         x_max, y_max = settings['battlefield_size']
         line_segs = {
-            'left': ((0, 0), (0, y_max)),
-            'top': ((0, y_max), (x_max, y_max)),
-            'right': ((x_max, y_max), (x_max, 0)),
-            'bottom': ((x_max, 0), (0, 0))
+            'left': [(0, 0), (0, y_max)],
+            'top': [(0, y_max), (x_max, y_max)],
+            'right': [(x_max, y_max), (x_max, 0)],
+            'bottom': [(x_max, 0), (0, 0)]
         }
         for robot_id in robot_ids:
             data = self._field[robot_id]
@@ -215,12 +219,12 @@ class Game(object):
             logger.info('<{name} {robot_id}> started'.format(
                 name=data['robot'].__class__.__name__,
                 robot_id=robot_id))
-            #yield from data['robot'].started().send(data['coords'])  # TODO: Wait?
             data['robot'].started().send(data['coords'])
             data['then'] = now
 
         robot_ids = self.active_robots()
-        while len(robot_ids) > 1:
+        while len(robot_ids) > 1 and self._turn < settings['max_turns']:
+            self._turn += 1
             yield from self._update_radar(robot_ids)
             yield from self._move_robots(robot_ids)
             asyncio.sleep(settings['radar_interval'] / 1000)
@@ -229,11 +233,10 @@ class Game(object):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.run_robots())
 
-        winners = self.active_robots()
-        if len(winners):
-            winner = winners.pop()
-            name = self._field[winner]['robot'].__class__.__name__
-            return name
+        winners = ["{} (damage {})".format(self._field[id_]['robot'].__class__.__name__,
+                                            self._field[id_]['damage'])
+                   for id_ in self.active_robots()]
+        return winners
 
 
 def import_robots(robot_names):
@@ -257,8 +260,10 @@ if __name__ == '__main__':
 
     Robots = import_robots(args.robot_names)
     game = Game(Robots)
-    winner_name = game.run()
-    if winner_name:
-        print('The winner is {}'.format(winner_name))
+    winners = game.run()
+    if len(winners) > 1:
+        print('Stalemate. The survivors are ' + ', '.join(winners))
+    elif len(winners) == 1:
+        print('The winner is ' + winners[0])
     else:
         print('All robots were destroyed')

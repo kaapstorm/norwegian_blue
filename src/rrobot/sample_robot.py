@@ -6,7 +6,7 @@ overload.
 
 """
 import math
-from rrobot.robot_base import RobotBase
+from rrobot.robot_base import RobotBase, coroutine
 from rrobot.settings import settings
 
 
@@ -46,16 +46,19 @@ class MiddleBot(RobotBase):
         # Set speed
         self.speed = settings['max_speed']
 
+    @coroutine
     def started(self):
         while True:
             coords = yield
             self._move_to_middle(coords)
 
+    @coroutine
     def bumped(self):
         while True:
             _ = yield
             self._move_to_middle()
 
+    @coroutine
     def radar_updated(self):
         while True:
             _ = yield
@@ -73,6 +76,7 @@ class HunterKiller(RobotBase):
     """
     Chases the closest robot, attacking it constantly.
     """
+    @coroutine
     def radar_updated(self):
         """
         Called at a regular interval.
