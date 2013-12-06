@@ -1,7 +1,9 @@
-import asyncio
 
 
 def coroutine(func):
+    """
+    Decorator that starts a coroutine so the next call can send it a value
+    """
     def start(*args, **kwargs):
         coro = func(*args, **kwargs)
         coro.send(None)
@@ -89,24 +91,21 @@ class RobotBase(object):
         self._game = game
 
     @property
-    @asyncio.coroutine
     def coords(self):
         """Coordinates (origin southwest corner of battlefield)"""
-        coords = yield from self._game.get_coords(self.id)
+        coords = self._game.get_coords(self.id)
         return coords
 
     @property
-    @asyncio.coroutine
     def damage(self):
         """Damage rating of 0 to 99"""
-        damage = yield from self._game.get_damage(self.id)
+        damage = self._game.get_damage(self.id)
         return damage
 
     @property
-    @asyncio.coroutine
     def heading(self):
         """Heading (radians counterclockwise from east)"""
-        rads = yield from self._game.get_heading(self.id)
+        rads = self._game.get_heading(self.id)
         return rads
 
     @heading.setter
@@ -114,10 +113,9 @@ class RobotBase(object):
         self._game.set_heading(self.id, rads)
 
     @property
-    @asyncio.coroutine
     def speed(self):
         """Speed (metres per second)"""
-        mps = yield from self._game.get_speed(self.id)
+        mps = self._game.get_speed(self.id)
         return mps
 
     @speed.setter

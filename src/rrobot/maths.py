@@ -81,8 +81,12 @@ def get_inverse_square(p1, p2, intensity):
     20.0
     >>> get_inverse_square((1, 1), (1, 3), 20)
     5.0
+    >>> get_inverse_square((1, 1), (1, 1), 20)
+    None
 
     """
+    if p1 == p2:
+        return None
     x1, y1 = p1
     x2, y2 = p2
     r = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)

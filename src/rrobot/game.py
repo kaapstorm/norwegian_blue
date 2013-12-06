@@ -77,24 +77,26 @@ class Game(object):
             name=attacker['instance'].__class__.__name__,
             robot_id=robot_id))
 
-        for target_id in self.active_robots():
-            target = self._robots[target_id]
+        for target in self.active_robots():
             if is_in_angle(attacker['coords'],
                            attacker['heading'],
                            settings['attack_angle'],
                            target['coords']):
-                damage = get_inverse_square(attacker['coords'],
-                                            target['coords'],
-                                            settings['attack_damage'])
-                # Because we still put robots on top of one another, reduce damage to max
-                # TODO: Make sure distance is always greater than 0
-                damage = min(damage, settings['attack_damage'])
-                logger.info('<{name} {robot_id}> suffered {damage} damage'.format(
-                    name=target['instance'].__class__.__name__,
-                    robot_id=robot_id,
-                    damage=damage))
-                target['damage'] += damage
-                target['instance'].attacked().send(attacker['instance'].__class__.__name__)
+                # TODO: Make sure distance between robots is reasonable
+                if attacker['coords'] == target['coords']:
+                    damage = settings['attack_damage']
+                else:
+                    damage = int(min(settings['attack_damage'],
+                                     get_inverse_square(attacker['coords'],
+                                                        target['coords'],
+                                                        settings['attack_damage'])))
+                if damage:
+                    logger.info('<{name} {robot_id}> suffered {damage} damage'.format(
+                        name=target['instance'].__class__.__name__,
+                        robot_id=robot_id,
+                        damage=damage))
+                    target['damage'] += damage
+                    target['instance'].attacked().send(attacker['instance'].__class__.__name__)
 
     def active_robots(self):
         """
