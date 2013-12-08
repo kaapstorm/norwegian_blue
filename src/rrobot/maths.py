@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 import numpy as np
 
@@ -82,7 +83,6 @@ def get_inverse_square(p1, p2, intensity):
     >>> get_inverse_square((1, 1), (1, 3), 20)
     5.0
     >>> get_inverse_square((1, 1), (1, 1), 20)
-    None
 
     """
     if p1 == p2:
@@ -97,47 +97,42 @@ def get_heading_p2p(p1, p2):
     """
     Return the heading from p1 to p2 in radians
 
-    >>> get_heading_p2p((1, 1), (2, 2))
+    >>> get_heading_p2p((0, 0), (1, 1))
     0.7853981633974483
+    >>> get_heading_p2p((0, 0), (0, 1))
+    1.5707963267948966
+    >>> get_heading_p2p((0, 0), (-1, 1))
+    2.356194490192345
+    >>> get_heading_p2p((0, 0), (-1, -1))
+    3.9269908169872414
+    >>> get_heading_p2p((0, 0), (0, -1))
+    4.71238898038469
+    >>> get_heading_p2p((0, 0), (1, -1))
+    5.497787143782138
 
     """
     x1, y1 = p1
     x2, y2 = p2
-    if x1 == x2:
-        # Horizontal
-        if y2 >= y1:
-            rads = 0  # To the right
+    dy = y2 - y1
+    dx = x2 - x1
+    if dx == 0:
+        # Vertical
+        if dy > 0:
+            # p2 is above p1
+            rads = math.pi / 2  # 90°
         else:
-            rads = math.pi  # To the left
+            # p2 is below p1
+            rads = math.pi * 1.5  # 270°
     else:
-        rads = math.atan((y2 - y1)/(x2 - x1))
+        dy = y2 - y1
+        dx = x2 - x1
+        if dx > 0 and dy >= 0:
+            # First quadrant
+            rads = math.atan(dy/dx)
+        elif dx > 0 and dy < 0:
+            # Fourth quadrant
+            rads = math.atan(dy/dx) + 2 * math.pi
+        else:
+            # Second and third quadrants
+            rads = math.atan(dy/dx) + math.pi
     return rads
-
-
-# From http://stackoverflow.com/a/9110966/245672
-def find_intersections(a1, a2, b1, b2):
-    a = np.mat([a1, a2])
-    b = np.mat([b1, b2])
-    # min, max and all for arrays
-    amin = lambda x1, x2: np.where(x1 < x2, x1, x2)
-    amax = lambda x1, x2: np.where(x1 > x2, x1, x2)
-    aall = lambda abools: np.dstack(abools).all(axis=2)
-    slope = lambda line: (lambda d: d[:, 1] / d[:, 0])(np.diff(line, axis=0))
-
-    x11, x21 = np.meshgrid(a[:-1, 0], b[:-1, 0])
-    x12, x22 = np.meshgrid(a[1:, 0], b[1:, 0])
-    y11, y21 = np.meshgrid(a[:-1, 1], b[:-1, 1])
-    y12, y22 = np.meshgrid(a[1:, 1], b[1:, 1])
-
-    m1, m2 = np.meshgrid(slope(a), slope(b))
-    m1inv, m2inv = 1 / m1, 1 / m2
-
-    yi = (m1 * (x21 - x11 - m2inv * y21) + y11) / (1 - m1 * m2inv)
-    xi = (yi - y21) * m2inv + x21
-
-    xconds = (amin(x11, x12) < xi, xi <= amax(x11, x12),
-              amin(x21, x22) < xi, xi <= amax(x21, x22))
-    yconds = (amin(y11, y12) < yi, yi <= amax(y11, y12),
-              amin(y21, y22) < yi, yi <= amax(y21, y22))
-
-    return xi[aall(xconds)], yi[aall(yconds)]
