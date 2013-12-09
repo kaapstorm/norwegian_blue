@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import argparse
+from collections import defaultdict
 import math
 import asyncio
 import logging
@@ -9,7 +10,7 @@ from rrobot.settings import settings
 from rrobot.maths import seg_intersect, is_in_angle, get_inverse_square
 
 
-# TODO: Add power. Attacks, accelleration, and maintaining speed cost power
+# TODO: Add power. Attacks, acceleration, and maintaining speed should cost power
 
 
 logger = logging.getLogger(__name__)
@@ -105,7 +106,7 @@ class Game(object):
     @staticmethod
     def _get_line_seg(data, now):
         """
-        Calculates the line segment representing a move based on the passed
+        Calculates the line segment representing a move based on the given
         robot data and the current time.
 
         >>> data = {
@@ -146,23 +147,29 @@ class Game(object):
         ...     'baz': ((2, 4), (4, 2))
         ... }
         >>> Game._get_intersections(line_segs) == {
-        ...     ('foo', 'bar'): (2, 2),
-        ...     ('bar', 'foo'): (2, 2)
+        ...     'foo': {'bar': (2.0, 2.0)},
+        ...     'bar': {'foo': (2.0, 2.0)}
         ... }  # doctest: +SKIP
+        True
+        >>> Game._get_intersections(line_segs) == {
+        ...     'foo': {'bar': (2.0, 2.0),
+        ...             'baz': (3.0, 3.0)},
+        ...     'bar': {'foo': (2.0, 2.0)},
+        ...     'baz': {'foo': (3.0, 3.0)}
+        ... }
         True
 
         """
         # Check intersections of each line segment with each other
-        intersections = {}
+        intersections = defaultdict(dict)
         for a_id, (a1, a2) in line_segs.items():
             for b_id, (b1, b2) in line_segs.items():
                 if a_id == b_id:
                     continue
                 intersection = seg_intersect(a1, a2, b1, b2)
                 if intersection:
-                    intersections[(a_id, b_id)] = intersection
-        # TODO: Find where line segments intersect multiple times, and return first intersections
-        # TODO: Don't skip test
+                    intersections[a_id][b_id] = intersection
+        # TODO: Find where line segments intersect multiple times, and choose the closest intersection
         return intersections
 
     @asyncio.coroutine
