@@ -80,17 +80,15 @@ class HunterKiller(RobotBase):
         """
         if coords is None:
             coords = self.coords
-        x, y = coords
         dist = closest = None
         for robot in radar:
-            x_r, y_r = robot['coords']
             name = robot['name']
             if name == self.__class__.__name__:
                 continue
-            d = math.sqrt((x_r - x) ** 2 + (y_r - y) ** 2)
+            d = get_dist(coords, robot['coords'])
             if dist is None or d < dist:
                 dist = d
-                closest = (x_r, y_r)
+                closest = robot['coords']
         return closest, dist
 
     @coroutine
