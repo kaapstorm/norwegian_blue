@@ -20,23 +20,25 @@ class MiddleBot(RobotBase):
         """
         Returns the coordinates of the middle of the battlefield
 
-        >>> settings = {'battlefield_size': (10, 10)}
-        >>> MiddleBot._get_middle()
-        (5, 5)
+        >>> MiddleBot._get_middle()  # Assumes default 100 x 100 battlefield
+        (50.0, 50.0)
 
         """
         x_max, y_max = settings['battlefield_size']
         return x_max / 2, y_max / 2
 
     def _move_to_middle(self, coords=None):
+        """
+        Sets heading and speed to move to the middle of the battlefield
+        """
         if coords is None:
             coords = self.coords
-        x, y = coords
         # Move to middle
         middle = self._get_middle()
         # Set heading
         self.heading = get_heading_p2p(coords, middle)
         # Set speed
+        # TODO: Set speed according to how close we are
         self.speed = settings['max_speed']
 
     @coroutine
@@ -53,6 +55,9 @@ class MiddleBot(RobotBase):
 
     @coroutine
     def radar_updated(self):
+        """
+        Stops when the robot is close to the middle
+        """
         while True:
             _ = yield
             # Are we there yet?
@@ -60,6 +65,7 @@ class MiddleBot(RobotBase):
             x_mid, y_mid = self._get_middle()
             x_d, y_d = x_mid - x, y_mid - y
             dist = math.sqrt(x_d ** 2 + y_d ** 2)
+            # TODO: Reduce speed as we approach
             if dist < 10:
                 # Stop
                 self.speed = 0
