@@ -256,6 +256,7 @@ class Game(object):
             yield from self._update_radar(robots)
             yield from self._move_robots(robots)
             yield from asyncio.sleep(settings['radar_interval'] / 1000)
+            robots = self.active_robots()
 
     def run(self):
         loop = asyncio.get_event_loop()
