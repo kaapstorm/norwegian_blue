@@ -113,8 +113,7 @@ def get_heading_p2p(p1, p2):
     """
     x1, y1 = p1
     x2, y2 = p2
-    dy = y2 - y1
-    dx = x2 - x1
+    dx, dy = x2 - x1, y2 - y1
     if dx == 0:
         # Vertical
         if dy > 0:
@@ -124,8 +123,6 @@ def get_heading_p2p(p1, p2):
             # p2 is below p1
             rads = math.pi * 1.5  # 270°
     else:
-        dy = y2 - y1
-        dx = x2 - x1
         if dx > 0 and dy >= 0:
             # First quadrant
             rads = math.atan(dy/dx)
@@ -136,3 +133,17 @@ def get_heading_p2p(p1, p2):
             # Second and third quadrants
             rads = math.atan(dy/dx) + math.pi
     return rads
+
+
+def get_dist(p1, p2):
+    """
+    Return the distance between two points
+
+    >>> get_dist((0, 0), (3, 4))
+    5.0
+
+    """
+    x1, y1 = p1
+    x2, y2 = p2
+    dx, dy = x2 - x1, y2 - y1
+    return math.sqrt(dx ** 2 + dy ** 2)

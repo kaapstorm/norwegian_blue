@@ -6,7 +6,7 @@ overload.
 
 """
 import math
-from rrobot.maths import get_heading_p2p
+from rrobot.maths import get_heading_p2p, get_dist
 from rrobot.robot_base import RobotBase, coroutine
 from rrobot.settings import settings
 
@@ -61,10 +61,7 @@ class MiddleBot(RobotBase):
         while True:
             _ = yield
             # Are we there yet?
-            x, y = self.coords
-            x_mid, y_mid = self._get_middle()
-            x_d, y_d = x_mid - x, y_mid - y
-            dist = math.sqrt(x_d ** 2 + y_d ** 2)
+            dist = get_dist(self.coords, self._get_middle())
             # TODO: Reduce speed as we approach
             if dist < 10:
                 # Stop
