@@ -7,7 +7,7 @@ import logging
 import random
 import sys
 from rrobot.settings import settings
-from rrobot.maths import seg_intersect, is_in_angle, get_inverse_square
+from rrobot.maths import seg_intersect, is_in_angle, get_inverse_square, get_dist
 
 
 # TODO: Add power. Attacks, acceleration, and maintaining speed should cost power
@@ -147,15 +147,8 @@ class Game(object):
         ...     'baz': ((2, 4), (4, 2))
         ... }
         >>> Game._get_intersections(line_segs) == {
-        ...     'foo': {'bar': (2.0, 2.0)},
-        ...     'bar': {'foo': (2.0, 2.0)}
-        ... }  # doctest: +SKIP
-        True
-        >>> Game._get_intersections(line_segs) == {
-        ...     'foo': {'bar': (2.0, 2.0),
-        ...             'baz': (3.0, 3.0)},
-        ...     'bar': {'foo': (2.0, 2.0)},
-        ...     'baz': {'foo': (3.0, 3.0)}
+        ...     ('foo', 'bar'): (2.0, 2.0),
+        ...     ('bar', 'foo'): (2.0, 2.0)
         ... }
         True
 
@@ -169,8 +162,35 @@ class Game(object):
                 intersection = seg_intersect(a1, a2, b1, b2)
                 if intersection:
                     intersections[a_id][b_id] = intersection
-        # TODO: Find where line segments intersect multiple times, and choose the closest intersection
-        return intersections
+        # Find where line segments intersect multiple times, and choose the closest intersection
+        first_intersections = {}
+        for a_id in intersections.keys():  # Iterate keys because we will be changing values
+            value = intersections[a_id]
+            if len(value) > 1:
+                # Choose the closest intersection
+                closest_b_id = closest_coords = closest_dist = None
+                for b_id, coords in value.items():
+                    if coords is None:
+                        # This intersection has been deleted
+                        continue
+                    dist = get_dist(line_segs[a_id][0], coords)
+                    if closest_dist is None or dist < closest_dist:
+                        closest_b_id = b_id
+                        closest_coords = coords
+                        closest_dist = dist
+                first_intersections[(a_id, closest_b_id)] = closest_coords
+                # Delete the other intersections
+                for b_id in value.keys():
+                    if b_id is not closest_b_id:
+                        intersections[b_id][a_id] = None
+            else:
+                b_id = next(iter(value.keys()))
+                coords = value[b_id]
+                if coords is None:
+                    # This intersection has been deleted
+                    continue
+                first_intersections[(a_id, b_id)] = coords
+        return first_intersections
 
     @asyncio.coroutine
     def _move_robots(self, robots):
@@ -187,6 +207,7 @@ class Game(object):
         for robot in robots:
             line_segs[robot['instance'].id] = list(self._get_line_seg(robot, now))
         # Calculate bumps as intersections of line segments
+        # TODO: Calculate bumps as collisions of vectors
         bumps = self._get_intersections(line_segs)
         for (a_id, b_id), coords in bumps.items():
             if isinstance(a_id, str):
