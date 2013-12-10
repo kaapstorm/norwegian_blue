@@ -7,7 +7,7 @@ import logging
 import random
 import sys
 from rrobot.settings import settings
-from rrobot.maths import seg_intersect, is_in_angle, get_inverse_square, get_dist
+from rrobot.maths import is_in_angle, get_inverse_square, get_dist  #, seg_intersect
 
 
 # TODO: Add power. Attacks, acceleration, and maintaining speed should cost power
@@ -119,13 +119,16 @@ class Game(object):
         ((2, 2), (7.0, 2.0))
 
         """
+        # TODO: Why are line segments so short?
         # Calc new position
+        x_max, y_max = settings['battlefield_size']
         x, y = data['coords']
         t_d = now - data['then']
-        dist = data['speed'] * t_d  # speed is m/s; TODO: Convert t_d to seconds
+        dist = data['speed'] * t_d  # speed is in m/s; t_d is in s
         x_d = math.cos(data['heading']) * dist
         y_d = math.sin(data['heading']) * dist
-        x_new, y_new = x + x_d, y + y_d
+        x_new = max(0, min(x + x_d, x_max))
+        y_new = max(0, min(y + y_d, y_max))
         return (x, y), (x_new, y_new)
 
     @asyncio.coroutine
@@ -136,109 +139,102 @@ class Game(object):
             logger.info('{robot} radar updated'.format(robot=robot['instance']))
             robot['instance'].radar_updated().send(radar)
 
-    @staticmethod
-    def _get_intersections(line_segs):
-        """
-        Return the intersections line segments.
-
-        >>> line_segs = {
-        ...     'foo': ((1, 1), (5, 5)),
-        ...     'bar': ((1, 3), (3, 1)),
-        ...     'baz': ((2, 4), (4, 2))
-        ... }
-        >>> Game._get_intersections(line_segs) == {
-        ...     ('foo', 'bar'): (2.0, 2.0),
-        ...     ('bar', 'foo'): (2.0, 2.0)
-        ... }
-        True
-
-        """
-        # Check intersections of each line segment with each other
-        intersections = defaultdict(dict)
-        for a_id, (a1, a2) in line_segs.items():
-            for b_id, (b1, b2) in line_segs.items():
-                if a_id == b_id:
-                    continue
-                intersection = seg_intersect(a1, a2, b1, b2)
-                if intersection:
-                    intersections[a_id][b_id] = intersection
-        # Find where line segments intersect multiple times, and choose the closest intersection
-        first_intersections = {}
-        for a_id in intersections.keys():  # Iterate keys because we will be changing values
-            value = intersections[a_id]
-            if len(value) > 1:
-                # Choose the closest intersection
-                closest_b_id = closest_coords = closest_dist = None
-                for b_id, coords in value.items():
-                    if coords is None:
-                        # This intersection has been deleted
-                        continue
-                    dist = get_dist(line_segs[a_id][0], coords)
-                    if closest_dist is None or dist < closest_dist:
-                        closest_b_id = b_id
-                        closest_coords = coords
-                        closest_dist = dist
-                first_intersections[(a_id, closest_b_id)] = closest_coords
-                # Delete the other intersections
-                for b_id in value.keys():
-                    if b_id is not closest_b_id:
-                        intersections[b_id][a_id] = None
-            else:
-                b_id = next(iter(value.keys()))
-                coords = value[b_id]
-                if coords is None:
-                    # This intersection has been deleted
-                    continue
-                first_intersections[(a_id, b_id)] = coords
-        return first_intersections
+    # @staticmethod
+    # def _get_intersections(line_segs):
+    #     """
+    #     Return the intersections line segments.
+    #
+    #     >>> line_segs = {
+    #     ...     'foo': ((1, 1), (5, 5)),
+    #     ...     'bar': ((1, 3), (3, 1)),
+    #     ...     'baz': ((2, 4), (4, 2))
+    #     ... }
+    #     >>> Game._get_intersections(line_segs) == {
+    #     ...     ('bar', 'foo'): (2.0, 2.0),
+    #     ...     ('foo', 'bar'): (2.0, 2.0)
+    #     ... }
+    #     True
+    #
+    #     >>> line_segs = {
+    #     ...     'top': [(0, 100), (100, 100)],
+    #     ...     0: [(8.0, 78.0), (8.011349682022109, 77.99243354531859)],
+    #     ...     'left': [(0, 0), (0, 100)],
+    #     ...     1: [(53.0, 19.0), (52.99172765714267, 19.010845960635166)],
+    #     ...     'right': [(100, 100), (100, 0)],
+    #     ...     'bottom': [(100, 0), (0, 0)]
+    #     ... }
+    #     >>> Game._get_intersections(line_segs) == {}
+    #     True
+    #
+    #     """
+    #     # Check intersections of each line segment with each other
+    #     intersections = defaultdict(dict)
+    #     for a_id, (a1, a2) in line_segs.items():
+    #         for b_id, (b1, b2) in line_segs.items():
+    #             if a_id == b_id:
+    #                 continue
+    #             intersection = seg_intersect(a1, a2, b1, b2)
+    #             if intersection:
+    #                 intersections[a_id][b_id] = intersection
+    #     # Find where line segments intersect multiple times, and choose the closest intersection
+    #     first_intersections = {}
+    #     for a_id in intersections.keys():  # Iterate keys because we will be changing values
+    #         value = intersections[a_id]
+    #         if len(value) > 1:
+    #             # Choose the closest intersection
+    #             closest_b_id = closest_coords = closest_dist = None
+    #             for b_id, coords in value.items():
+    #                 if coords is None:
+    #                     # This intersection has been deleted
+    #                     continue
+    #                 dist = get_dist(line_segs[a_id][0], coords)
+    #                 if closest_dist is None or dist < closest_dist:
+    #                     closest_b_id = b_id
+    #                     closest_coords = coords
+    #                     closest_dist = dist
+    #             first_intersections[(a_id, closest_b_id)] = closest_coords
+    #             # Delete the other intersections
+    #             for b_id in value.keys():
+    #                 if b_id is not closest_b_id:
+    #                     intersections[b_id][a_id] = None
+    #         else:
+    #             b_id = next(iter(value.keys()))
+    #             coords = value[b_id]
+    #             if coords is None:
+    #                 # This intersection has been deleted
+    #                 continue
+    #             first_intersections[(a_id, b_id)] = coords
+    #     return first_intersections
 
     @asyncio.coroutine
     def _move_robots(self, robots):
         # Calculate moves as line segments
         loop = asyncio.get_event_loop()
         now = loop.time()
-        x_max, y_max = settings['battlefield_size']
-        line_segs = {
-            'left': [(0, 0), (0, y_max)],
-            'top': [(0, y_max), (x_max, y_max)],
-            'right': [(x_max, y_max), (x_max, 0)],
-            'bottom': [(x_max, 0), (0, 0)]
-        }
+        # TODO: Calculate bumps as collisions of vectors
+        line_segs = {}
         for robot in robots:
             line_segs[robot['instance'].id] = list(self._get_line_seg(robot, now))
-        # Calculate bumps as intersections of line segments
-        # TODO: Calculate bumps as collisions of vectors
-        bumps = self._get_intersections(line_segs)
-        for (a_id, b_id), coords in bumps.items():
-            if isinstance(a_id, str):
-                # a_id is a border
-                continue
-            # Set the "to" point to the intersection
-            # TODO: Do not put robots on top of each other
-            line_segs[a_id][1] = coords
-        # Move robots to "to" points
-        for robot in robots:
+            # Move robots to "to" points
             robot.update({
                 'coords': line_segs[robot['instance'].id][1],
                 'then': now
             })
-        # Stop bumped robots and notify them
-        for (a_id, b_id) in bumps.keys():
-            if isinstance(a_id, str):
-                # a_id is a border
-                continue
-            if isinstance(b_id, str):
-                bumper = b_id
-                logger.info('{robot} bumped {bumper} boundary'.format(
-                    robot=self._robots[a_id]['instance'],
-                    bumper=bumper))
-            else:
-                bumper = self._robots[b_id]['instance'].__class__.__name__
-                logger.info('{robot} bumped {bumper}'.format(
-                    robot=self._robots[a_id]['instance'],
-                    bumper=self._robots[b_id]['instance']))
-            self.set_speed(a_id, 0)
-            self._robots[a_id]['instance'].bumped().send(bumper)
+            # TODO: Stop bumped robots and notify them
+            x_max, y_max = settings['battlefield_size']
+            x, y = line_segs[robot['instance'].id][1]
+            bumper = None
+            if x == 0:
+                bumper = 'left'
+            elif x == x_max:
+                bumper = 'right'
+            elif y == 0:
+                bumper = 'bottom'
+            elif y == y_max:
+                bumper = 'top'
+            if bumper:
+                self.set_speed(robot['instance'].id, 0)
+                robot['instance'].bumped().send(bumper)
 
     @asyncio.coroutine
     def run_robots(self):
@@ -260,6 +256,7 @@ class Game(object):
             yield from self._update_radar(robots)
             yield from self._move_robots(robots)
             yield from asyncio.sleep(settings['radar_interval'] / 1000)
+            robots = self.active_robots()
 
     def run(self):
         loop = asyncio.get_event_loop()
