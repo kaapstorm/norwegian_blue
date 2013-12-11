@@ -51,7 +51,7 @@ Testing
 To run tests and play games, use the following commands: ::
 
     (venv)$ export PYTHONPATH="`pwd`/src"
-    (venv)$ cd src/rrobots
+    (venv)$ cd src/rrobot
     (venv)$ python -m unittest tests.py
     (venv)$ python game.py sample_robots.MiddleBot sample_robots.HunterKiller
 
