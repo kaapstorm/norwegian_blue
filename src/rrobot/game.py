@@ -8,6 +8,7 @@ import random
 import sys
 from rrobot.settings import settings
 from rrobot.maths import is_in_angle, get_inverse_square, get_dist  #, seg_intersect
+import visualisation
 
 
 # TODO: Add power. Attacks, acceleration, and maintaining speed should cost power
@@ -139,6 +140,7 @@ class Game(object):
             logger.info('{robot} radar updated'.format(robot=robot['instance']))
             robot['instance'].radar_updated().send(radar)
 
+    @visualisation.visualise(visualisation.HTML,'output.html')
     @asyncio.coroutine
     def _move_robots(self, robots):
         # Calculate moves as line segments
