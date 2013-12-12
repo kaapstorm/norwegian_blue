@@ -5,7 +5,6 @@ See documentation for RobotBase for details of coroutine methods to
 overload.
 
 """
-import math
 from rrobot.maths import get_heading_p2p, get_dist
 from rrobot.robot_base import RobotBase, coroutine
 from rrobot.settings import settings

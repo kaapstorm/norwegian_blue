@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 from collections import defaultdict
+from importlib import import_module
 import math
 import asyncio
 import logging
@@ -212,9 +213,9 @@ def import_robots(robot_names):
     for robot_name in robot_names:
         module_name, class_name = robot_name.rsplit('.', 1)
         try:
-            module = __import__(module_name, globals(), locals(), class_name, 0)
+            module = import_module(module_name)
             class_ = getattr(module, class_name)
-        except ImportError:
+        except ImportError as err:
             logger.error('Unable to import "{}". Skipping robot.'.format(robot_name))
             continue
         classes.append(class_)
