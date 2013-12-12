@@ -2,26 +2,44 @@ from rrobot.settings import settings
 import copy
 import json
 
+
 class Visualisor:
-    def start(self,game,*args,**kwargs): pass
-    def before(self,game,*args,**kwargs): pass
-    def after(self,game,*args,**kwargs): pass
-    def done(self,game,*args,**kwargs): pass
+    def start(self, game, *args, **kwargs):
+        pass
+
+    def before(self, game, *args, **kwargs):
+        pass
+
+    def after(self, game, *args, **kwargs):
+        pass
+
+    def done(self, game, *args, **kwargs):
+        pass
+
 
 class JSON(Visualisor):
-    def __init__(self,filename):
+    def __init__(self, filename):
         self.filename = filename
         self.turns = {}
         self.robot_names = {}
         self.total_turns = 0
-    def create_data(self,game):
-        self.data = {'robots':self.robot_names,'turns':{'total_turns':self.total_turns,'turns':self.turns}}
-    def done(self,game,*args,**kwargs):
-        self.create_data(game)
-        with open(self.filename,'w') as f:
-            f.write(json.dumps(self.data))
-    def after(self,game,*args,**kwargs):
-        turn_state = {'robots':{'state':{}}}
+
+    def get_data(self, game):
+        return {
+            'robots': self.robot_names,
+            'turns': {
+                'total_turns': self.total_turns,
+                'turns': self.turns
+            }
+        }
+
+    def done(self, game, *args, **kwargs):
+        data = self.get_data(game)
+        with open(self.filename, 'w') as f:
+            f.write(json.dumps(data))
+
+    def after(self, game, *args, **kwargs):
+        turn_state = {'robots': {'state': {}}}
         for robot in game.active_robots():
             robot_id = robot['instance'].id
             if not robot_id in self.robot_names:
@@ -29,13 +47,14 @@ class JSON(Visualisor):
             robot_state = copy.copy(robot)
             del robot_state['instance']
             turn_state['robots']['state'][robot_id] = robot_state
-        self.turns[game._turn] = turn_state
-        self.total_turns = max(self.total_turns,game._turn)
+        self.turns[game.turn] = turn_state
+        self.total_turns = max(self.total_turns, game.turn)
+
 
 class HTML(JSON):
-    def done(self,game,*args,**kwargs):
-        self.create_data(game)
-        with open(self.filename,'w') as f:
+    def done(self, game, *args, **kwargs):
+        data = self.get_data(game)
+        with open(self.filename, 'w') as f:
             f.write("""<html>
 <head>
   <style>
@@ -152,28 +171,29 @@ class HTML(JSON):
     $('#stop').click(function(){
       stop();
     });
-    var game_data=""" + format(json.dumps(self.data)) + """;
+    var game_data=""" + format(json.dumps(data)) + """;
     var robot_hue_multiplier = 360/Object.keys(game_data["robots"]).length;
   </script>
 </body>
 </html>
 """)
 
+
 class visualise:
-    def __init__ (self, VisualisationKlass, *args, **kwargs):
-        self.visualisor = VisualisationKlass(*args,**kwargs)
+    def __init__(self, VisualisationKlass, *args, **kwargs):
+        self.visualisor = VisualisationKlass(*args, **kwargs)
 
-    def done(self,game):
-        return not ( len(game.active_robots()) > 1 and game._turn < settings['max_turns'] )
+    def done(self, game):
+        return not (len(game.active_robots()) > 1 and game.turn < settings['max_turns'])
 
-    def __call__ (self, function):
-        def __wrapped(game,*args,**kwargs):
-            if game._turn == 1:
-                self.visualisor.start(game,*args,**kwargs)
-            self.visualisor.before(game,*args,**kwargs)
-            result = function(game,*args,**kwargs)
-            self.visualisor.after(game,*args,**kwargs)
+    def __call__(self, function):
+        def __wrapped(game, *args, **kwargs):
+            if game.turn == 1:
+                self.visualisor.start(game, *args, **kwargs)
+            self.visualisor.before(game, *args, **kwargs)
+            result = function(game, *args, **kwargs)
+            self.visualisor.after(game, *args, **kwargs)
             if self.done(game):
-                self.visualisor.done(game,*args,**kwargs)
+                self.visualisor.done(game, *args, **kwargs)
             return result
         return __wrapped

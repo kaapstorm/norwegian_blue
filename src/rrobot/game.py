@@ -47,6 +47,10 @@ class Game(object):
             value=value))
         self._robots[robot_id][attr] = value
 
+    @property
+    def turn(self):
+        return self._turn
+
     def get_coords(self, robot_id):
         return self._get_robot_attr(robot_id, 'coords')
 
@@ -105,10 +109,10 @@ class Game(object):
         return [r for r in self._robots if r['damage'] < 100]
 
     @staticmethod
-    def _get_line_seg(data, now):
+    def _get_dest(data, now):
         """
-        Calculates the line segment representing a move based on the given
-        robot data and the current time.
+        Calculates the destination of a move based on the given robot data and
+        the current time.
 
         >>> data = {
         ...     'coords': (2, 2),
@@ -116,21 +120,24 @@ class Game(object):
         ...     'speed': 5,
         ...     'heading': 0
         ... }
-        >>> Game._get_line_seg(data, 2)
-        ((2, 2), (7.0, 2.0))
+        >>> Game._get_dest(data, 2)
+        (7.0, 2.0)
 
         """
-        # TODO: Why are line segments so short?
         # Calc new position
-        x_max, y_max = settings['battlefield_size']
         x, y = data['coords']
         t_d = now - data['then']
         dist = data['speed'] * t_d  # speed is in m/s; t_d is in s
         x_d = math.cos(data['heading']) * dist
         y_d = math.sin(data['heading']) * dist
-        x_new = max(0, min(x + x_d, x_max))
-        y_new = max(0, min(y + y_d, y_max))
-        return (x, y), (x_new, y_new)
+        x_new = x + x_d
+        y_new = y + y_d
+        # Set 0 <= x_new, y_new <= settings['battlefield_size']
+        # TODO: Use line segment intersection with border if out of bounds
+        x_max, y_max = settings['battlefield_size']
+        x_new = max(0, min(x_new, x_max))
+        y_new = max(0, min(y_new, y_max))
+        return x_new, y_new
 
     @asyncio.coroutine
     def _update_radar(self, robots):
@@ -140,24 +147,22 @@ class Game(object):
             logger.info('{robot} radar updated'.format(robot=robot['instance']))
             robot['instance'].radar_updated().send(radar)
 
-    @visualisation.visualise(visualisation.HTML,'output.html')
+    @visualisation.visualise(visualisation.HTML, 'output.html')
     @asyncio.coroutine
     def _move_robots(self, robots):
-        # Calculate moves as line segments
         loop = asyncio.get_event_loop()
         now = loop.time()
-        # TODO: Calculate bumps as collisions of vectors
-        line_segs = {}
+        # TODO: Calculate collisions of robots with each other using vectors
         for robot in robots:
-            line_segs[robot['instance'].id] = list(self._get_line_seg(robot, now))
+            dest = self._get_dest(robot, now)
             # Move robots to "to" points
             robot.update({
-                'coords': line_segs[robot['instance'].id][1],
+                'coords': dest,
                 'then': now
             })
-            # TODO: Stop bumped robots and notify them
+            # Stop bumped robots and notify them
             x_max, y_max = settings['battlefield_size']
-            x, y = line_segs[robot['instance'].id][1]
+            x, y = dest
             bumper = None
             if x == 0:
                 bumper = 'left'
