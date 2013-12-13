@@ -24,7 +24,7 @@ class Game(object):
         Accepts an iterable of Robot classes, and initialises a battlefield
         with them.
         """
-        self._turn = 0  # Turn is used to detect stalemate
+        self._start_time = None  # Used to calculate game duration
         self._robots = []  # List of robots in the game
         x_max, y_max = settings['battlefield_size']
         for robot_id, Robot in enumerate(robot_classes):
@@ -49,8 +49,11 @@ class Game(object):
         self._robots[robot_id][attr] = value
 
     @property
-    def turn(self):
-        return self._turn
+    def time(self):
+        if self._start_time is None:
+            return None  # Game not started
+        loop = asyncio.get_event_loop()
+        return loop.time() - self._start_time
 
     def get_coords(self, robot_id):
         return self._get_robot_attr(robot_id, 'coords')
@@ -181,6 +184,7 @@ class Game(object):
     def run_robots(self):
         loop = asyncio.get_event_loop()
         now = loop.time()
+        self._start_time = now
         for robot in self._robots:
             logger.info('{robot} started at {coords}'.format(
                 robot=robot['instance'],
@@ -189,11 +193,9 @@ class Game(object):
             robot['then'] = now
 
         robots = self.active_robots()
-        while len(robots) > 1 and self._turn < settings['max_turns']:
-            self._turn += 1
+        while len(robots) > 1 and self.time < settings['max_duration']:
             logger.info('----------------------------------------')
-            logger.info('Turn: %s', self._turn)
-            logger.info('Time: %s', loop.time())
+            logger.info('Time: %s', self.time)
             yield from self._update_radar(robots)
             yield from self._move_robots(robots)
             yield from asyncio.sleep(settings['radar_interval'] / 1000)

@@ -99,9 +99,11 @@ class HunterKiller(RobotBase):
             if dist is not None:  # distance to closest is None if there are no other robots
                 self.heading = get_heading_p2p(coords, closest)
                 # Hunt
+                # TODO: Reduce speed as we approach
                 self.speed = settings['max_speed']
-                # Kill. Attacking is free. Why not do it all the time?
-                self.attack()
+                # Kill.
+                if dist < 3:
+                    self.attack()
 
 
 if __name__ == '__main__':

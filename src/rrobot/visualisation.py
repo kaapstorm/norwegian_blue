@@ -47,8 +47,8 @@ class JSON(Visualisor):
             robot_state = copy.copy(robot)
             del robot_state['instance']
             turn_state['robots']['state'][robot_id] = robot_state
-        self.turns[game.turn] = turn_state
-        self.total_turns = max(self.total_turns, game.turn)
+        self.turns[game.time] = turn_state
+        self.total_turns = max(self.total_turns, game.time)
 
 
 class HTML(JSON):
@@ -184,11 +184,12 @@ class visualise:
         self.visualisor = VisualisationKlass(*args, **kwargs)
 
     def done(self, game):
-        return not (len(game.active_robots()) > 1 and game.turn < settings['max_turns'])
+        return not (len(game.active_robots()) > 1 and game.time < settings['max_duration'])
 
     def __call__(self, function):
         def __wrapped(game, *args, **kwargs):
-            if game.turn == 1:
+            turn_len = settings['max_duration'] * 1000 / settings['radar_interval']
+            if game.time < 2 * turn_len:
                 self.visualisor.start(game, *args, **kwargs)
             self.visualisor.before(game, *args, **kwargs)
             result = function(game, *args, **kwargs)
