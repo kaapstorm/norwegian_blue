@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import argparse
-from collections import defaultdict
 from importlib import import_module
 import math
 import asyncio
@@ -8,7 +7,7 @@ import logging
 import random
 import sys
 from rrobot.settings import settings
-from rrobot.maths import is_in_angle, get_inverse_square, get_dist  #, seg_intersect
+from rrobot.maths import is_in_angle, get_dist
 from rrobot import visualisation
 
 
@@ -35,7 +34,8 @@ class Game(object):
                 'speed': 0.0,
                 'damage': 0,
                 'heading': 0.0,
-                'then': None  # Timestamp of last move
+                'moved_at': None,  # Timestamp of last move
+                'attacked_at': None  # Timestamp of last attack
             })
 
     def _get_robot_attr(self, robot_id, attr):
@@ -83,22 +83,27 @@ class Game(object):
 
         .. _inverse square: http://en.wikipedia.org/wiki/Inverse-square_law
         """
+        loop = asyncio.get_event_loop()
+        now = loop.time()
         attacker = self._robots[robot_id]
+        if (
+            attacker['attacked_at'] is not None and
+            (now - attacker['attacked_at']) * 1000 < settings['attack_interval']
+        ):
+            # Attacker must wait a second before firing
+            logger.info('{robot} unable to attack yet'.format(robot=attacker['instance']))
+            return
+        attacker['attacked_at'] = now
         logger.info('{robot} attack'.format(robot=attacker['instance']))
-
         for target in self.active_robots():
             if is_in_angle(attacker['coords'],
                            attacker['heading'],
                            settings['attack_angle'],
                            target['coords']):
-                # TODO: Make sure distance between robots is reasonable
-                if attacker['coords'] == target['coords']:
-                    damage = settings['attack_damage']
-                else:
-                    damage = int(min(settings['attack_damage'],
-                                     get_inverse_square(attacker['coords'],
-                                                        target['coords'],
-                                                        settings['attack_damage'])))
+                dist = get_dist(attacker['coords'], target['coords'])
+                dist = max(dist, 1)  # Make sure distance between robots is reasonable
+                # Inverse square law. Drop values < 0
+                damage = int(settings['attack_damage'] / dist ** 2)
                 if damage:
                     logger.info('{robot} suffered {damage} damage'.format(
                         robot=target['instance'],
@@ -120,7 +125,7 @@ class Game(object):
 
         >>> data = {
         ...     'coords': (2, 2),
-        ...     'then': 1,
+        ...     'moved_at': 1,
         ...     'speed': 5,
         ...     'heading': 0
         ... }
@@ -130,7 +135,7 @@ class Game(object):
         """
         # Calc new position
         x, y = data['coords']
-        t_d = now - data['then']
+        t_d = now - data['moved_at']
         dist = data['speed'] * t_d  # speed is in m/s; t_d is in s
         x_d = math.cos(data['heading']) * dist
         y_d = math.sin(data['heading']) * dist
@@ -163,7 +168,7 @@ class Game(object):
             # Move robots to "to" points
             robot.update({
                 'coords': dest,
-                'then': now
+                'moved_at': now
             })
             # Stop bumped robots and notify them
             x_max, y_max = settings['battlefield_size']
@@ -191,7 +196,7 @@ class Game(object):
                 robot=robot['instance'],
                 coords=robot['coords']))
             robot['instance'].started().send(robot['coords'])
-            robot['then'] = now
+            robot['moved_at'] = now
 
         robots = self.active_robots()
         while len(robots) > 1 and self.time < settings['max_duration']:

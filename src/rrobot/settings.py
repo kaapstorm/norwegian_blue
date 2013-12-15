@@ -9,6 +9,7 @@ settings = {
 
     'attack_damage': 20,  # (percent) Maximum damage inflicted at close range
     'attack_angle': math.radians(15),  # Attack blasts outwards at this angle (think Claymore)
+    'attack_interval': 100,  # (milliseconds) Interval for weapon to recharge / reload
 
     'max_speed': 10,  # (metres per second)
     'log_level': logging.DEBUG

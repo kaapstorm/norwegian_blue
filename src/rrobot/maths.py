@@ -28,26 +28,6 @@ def is_in_angle(p1, h1, rads, p2):
     return h1 - half_rads < h2 < h1 + half_rads
 
 
-def get_inverse_square(p1, p2, intensity):
-    """
-    Calculate the intensity at p2 if intensity (given at range == 1)
-    drops at the inverse square of the distance from p1.
-
-    >>> get_inverse_square((1, 1), (1, 2), 20)
-    20.0
-    >>> get_inverse_square((1, 1), (1, 3), 20)
-    5.0
-    >>> get_inverse_square((1, 1), (1, 1), 20)
-
-    """
-    if p1 == p2:
-        return None
-    x1, y1 = p1
-    x2, y2 = p2
-    r = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    return intensity / (r ** 2)
-
-
 def get_heading_p2p(p1, p2):
     """
     Return the heading from p1 to p2 in radians
@@ -90,5 +70,4 @@ def get_dist(p1, p2):
     """
     x1, y1 = p1
     x2, y2 = p2
-    dx, dy = x2 - x1, y2 - y1
-    return math.sqrt(dx ** 2 + dy ** 2)
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
